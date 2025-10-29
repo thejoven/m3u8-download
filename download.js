@@ -38,6 +38,17 @@ import { constants } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Generate hash from URL for folder naming
+function generateUrlHash(url) {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    const char = url.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
 // Function to fetch content via HTTP/HTTPS
 function fetchContent(url) {
   return new Promise((resolve, reject) => {
@@ -210,11 +221,13 @@ async function main() {
     process.exit(1);
   }
 
-  // Create data directory if it doesn't exist
-  const dataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
+  // Create hash-based folder structure
+  const urlHash = generateUrlHash(url);
+  const baseDataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
+  const taskDataDir = join(baseDataDir, urlHash);
   try {
-    await mkdir(dataDir, { recursive: true });
-    console.log(`📁 Output directory: ${dataDir}`);
+    await mkdir(taskDataDir, { recursive: true });
+    console.log(`📁 Output directory: ${taskDataDir}`);
   } catch (error) {
     console.error('❌ Failed to create data directory:', error.message);
     process.exit(1);
@@ -224,6 +237,7 @@ async function main() {
     ? 'disabled'
     : (process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.HTTP_PROXY || 'http://127.0.0.1:7890');
   console.log(`🌐 Proxy: ${proxyStatus}`);
+  console.log(`🔑 Task ID: ${urlHash}`);
   console.log('📥 Fetching M3U8 playlist...');
   console.log(`🔗 URL: ${url}`);
   console.log('');
@@ -233,7 +247,7 @@ async function main() {
     const m3u8Content = await fetchContent(url);
 
     // Save the playlist
-    const playlistPath = join(dataDir, 'playlist.m3u8');
+    const playlistPath = join(taskDataDir, 'playlist.m3u8');
     await writeFile(playlistPath, m3u8Content);
     console.log(`✓ Saved playlist to: ${playlistPath}`);
     console.log('');
@@ -248,7 +262,7 @@ async function main() {
 
     // Download segments with concurrency from .env or default
     const concurrency = process.env.CONCURRENT_DOWNLOADS ? Number(process.env.CONCURRENT_DOWNLOADS) : 8;
-    const result = await downloadSegments(segments, url, dataDir, concurrency);
+    const result = await downloadSegments(segments, url, taskDataDir, concurrency);
 
     console.log('✅ Download completed!');
     console.log(`   Total: ${result.total}`);

@@ -50,6 +50,17 @@ function sanitizeFilename(name) {
     || 'video';
 }
 
+// Generate hash from URL for folder naming
+function generateUrlHash(url) {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    const char = url.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
 function defaultBaseNameFromUrl(urlStr) {
   try {
     const u = new URL(urlStr);
@@ -207,18 +218,22 @@ async function main() {
   // Setup proxy based on command line argument
   const proxyEnabled = setupProxy(args.noProxy);
 
-  const dataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
-  await mkdir(dataDir, { recursive: true });
+  // Create hash-based folder structure
+  const urlHash = generateUrlHash(args.url);
+  const baseDataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
+  const taskDataDir = join(baseDataDir, urlHash);
+  await mkdir(taskDataDir, { recursive: true });
 
   const proxyStatus = proxyEnabled
     ? (process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY || 'none')
     : 'disabled';
-  console.log(`📁 Output directory: ${dataDir}`);
+  console.log(`📁 Output directory: ${taskDataDir}`);
   console.log(`🌐 Proxy: ${proxyStatus}`);
+  console.log(`🔑 Task ID: ${urlHash}`);
   console.log('');
 
   const baseName = sanitizeFilename(args.name || defaultBaseNameFromUrl(args.url));
-  const outPath = join(dataDir, `${baseName}.mp4`);
+  const outPath = join(taskDataDir, `${baseName}.mp4`);
 
   try {
     await ensureFfmpegAvailable();

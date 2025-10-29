@@ -34,6 +34,17 @@ import { mkdir } from 'fs/promises';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Generate hash from URL for folder naming
+function generateUrlHash(url) {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    const char = url.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
 async function main() {
   // Get URL from command line arguments (filter out --no-proxy flag)
   const args = process.argv.slice(2).filter(arg => arg !== '--no-proxy');
@@ -52,11 +63,13 @@ async function main() {
     process.exit(1);
   }
 
-  // Create data directory if it doesn't exist
-  const dataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
+  // Create hash-based folder structure
+  const urlHash = generateUrlHash(url);
+  const baseDataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
+  const taskDataDir = join(baseDataDir, urlHash);
   try {
-    await mkdir(dataDir, { recursive: true });
-    console.log(`📁 Output directory: ${dataDir}`);
+    await mkdir(taskDataDir, { recursive: true });
+    console.log(`📁 Output directory: ${taskDataDir}`);
   } catch (error) {
     console.error('❌ Failed to create data directory:', error.message);
     process.exit(1);
@@ -66,12 +79,13 @@ async function main() {
     ? 'disabled'
     : (process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.HTTP_PROXY || 'http://127.0.0.1:7890');
   console.log(`🌐 Proxy: ${proxyStatus}`);
+  console.log(`🔑 Task ID: ${urlHash}`);
   console.log('📥 Starting download...');
   console.log(`🔗 URL: ${url}`);
   console.log('');
 
   try {
-    const response = await m3u8DLN(url, dataDir, {
+    const response = await m3u8DLN(url, taskDataDir, {
       segmentBatch: 8,
       streamBatch: 4,
       streamSelection: {
