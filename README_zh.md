@@ -4,6 +4,8 @@
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/thejoven_com?style=social)](https://x.com/thejoven_com)
 
+**[中文文档](README_zh.md)** | **[English Documentation](README.md)**
+
 ## 功能特性
 
 - 支持HTTP代理下载（默认127.0.0.1:7890，可用环境变量覆盖）

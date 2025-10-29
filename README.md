@@ -4,6 +4,8 @@ A M3U8/HLS downloader tool with resume capability and one-click download→merge
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/thejoven_com?style=social)](https://x.com/thejoven_com)
 
+**[中文文档](README_zh.md)** | **[English Documentation](README.md)**
+
 ## Features
 
 - HTTP proxy support (default: 127.0.0.1:7890, configurable via environment variables)
