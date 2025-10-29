@@ -1,0 +1,22 @@
+{
+  "name": "m3u8-downloader-cli",
+  "version": "1.0.0",
+  "description": "A CLI tool to download M3U8 streams with proxy support",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "one": "node cli.js"
+  },
+  "bin": {
+    "m3u8-one": "cli.js"
+  },
+  "keywords": ["m3u8", "downloader", "hls"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "m3u8-dln": "^0.0.3",
+    "https-proxy-agent": "^7.0.2",
+    "global-agent": "^3.0.0"
+  }
+}
