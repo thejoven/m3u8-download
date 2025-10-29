@@ -1,14 +1,29 @@
 #!/usr/bin/env node
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 // Configure global proxy BEFORE any other imports
 import { bootstrap } from 'global-agent';
 
-// Set proxy environment variables
-process.env.GLOBAL_AGENT_HTTP_PROXY = 'http://127.0.0.1:7890';
-process.env.GLOBAL_AGENT_HTTPS_PROXY = 'http://127.0.0.1:7890';
+// Check if --no-proxy flag is provided
+const noProxy = process.argv.includes('--no-proxy');
 
-// Bootstrap global agent to intercept all HTTP/HTTPS requests
-bootstrap();
+// Check if proxy should be disabled by .env config
+const disableProxyByEnv = process.env.DISABLE_PROXY === 'true';
+
+if (!noProxy && !disableProxyByEnv) {
+  // Use .env proxy settings if available, otherwise use defaults
+  const httpProxy = process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.HTTP_PROXY || 'http://127.0.0.1:7890';
+  const httpsProxy = process.env.GLOBAL_AGENT_HTTPS_PROXY || process.env.HTTPS_PROXY || httpProxy;
+
+  // Set proxy environment variables
+  process.env.GLOBAL_AGENT_HTTP_PROXY = httpProxy;
+  process.env.GLOBAL_AGENT_HTTPS_PROXY = httpsProxy;
+
+  // Bootstrap global agent to intercept all HTTP/HTTPS requests
+  bootstrap();
+}
 
 import https from 'https';
 import http from 'http';
@@ -178,17 +193,25 @@ async function downloadSegments(segments, baseUrl, outputDir, concurrency = 8) {
 }
 
 async function main() {
-  // Get URL from command line arguments
-  const url = process.argv[2];
+  // Get URL from command line arguments (filter out --no-proxy flag)
+  const args = process.argv.slice(2).filter(arg => arg !== '--no-proxy');
+  const url = args[0];
 
   if (!url) {
     console.error('❌ Error: Please provide a M3U8 URL as an argument');
-    console.log('Usage: node download.js <M3U8_URL>');
+    console.log('Usage: node download.js <M3U8_URL> [--no-proxy]');
+    console.log('');
+    console.log('Options:');
+    console.log('  --no-proxy   Disable proxy usage');
+    console.log('');
+    console.log('Configuration:');
+    console.log('  Create a .env file to set default values for proxy, output directory, and concurrency');
+    console.log('  See .env.example for available configuration options');
     process.exit(1);
   }
 
   // Create data directory if it doesn't exist
-  const dataDir = join(__dirname, 'data');
+  const dataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
   try {
     await mkdir(dataDir, { recursive: true });
     console.log(`📁 Output directory: ${dataDir}`);
@@ -197,7 +220,10 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('🌐 Using proxy: http://127.0.0.1:7890');
+  const proxyStatus = (noProxy || disableProxyByEnv)
+    ? 'disabled'
+    : (process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.HTTP_PROXY || 'http://127.0.0.1:7890');
+  console.log(`🌐 Proxy: ${proxyStatus}`);
   console.log('📥 Fetching M3U8 playlist...');
   console.log(`🔗 URL: ${url}`);
   console.log('');
@@ -220,8 +246,9 @@ async function main() {
       process.exit(1);
     }
 
-    // Download segments
-    const result = await downloadSegments(segments, url, dataDir, 8);
+    // Download segments with concurrency from .env or default
+    const concurrency = process.env.CONCURRENT_DOWNLOADS ? Number(process.env.CONCURRENT_DOWNLOADS) : 8;
+    const result = await downloadSegments(segments, url, dataDir, concurrency);
 
     console.log('✅ Download completed!');
     console.log(`   Total: ${result.total}`);

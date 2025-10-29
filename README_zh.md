@@ -8,10 +8,12 @@
 
 ## 功能特性
 
-- 支持HTTP代理下载（默认127.0.0.1:7890，可用环境变量覆盖）
+- 支持HTTP代理下载（默认127.0.0.1:7890，可通过环境变量或.env文件配置）
+- 代理禁用选项：使用 `--no-proxy` 参数禁用代理
+- 配置文件支持：创建 `.env` 文件进行持久化设置
 - 断点续传（手动模式）：自动跳过已下载的片段
 - 一键模式：直接下载→合并→压缩，输出单文件到 `data/`
-- 并发下载（手动模式）：默认8个并发连接
+- 并发下载（手动模式）：默认8个并发连接（可配置）
 - 进度显示与错误容错
 
 ## 安装依赖
@@ -36,12 +38,21 @@ node cli.js "<M3U8_URL>"
 # --crf <num>              质量/体积平衡（默认 23；越小越清晰）
 # --preset <p>             编码速度/效率（默认 medium）
 # --audio-bitrate <rate>   音频码率（默认 128k）
+# --no-proxy               禁用代理使用
 ```
 
 示例：
 
 ```bash
+# 基本用法
 node cli.js "https://example.com/playlist.m3u8" --name my-video --h265 --crf 26 --preset slow
+
+# 禁用代理
+node cli.js "https://example.com/playlist.m3u8" --no-proxy
+
+# 使用自定义代理（通过 .env 文件）
+# 创建 .env 文件并设置：HTTP_PROXY=http://your-proxy:8080
+node cli.js "https://example.com/playlist.m3u8"
 ```
 
 如果作为全局 CLI 安装（或 `npm link` 本仓库），可直接使用：
@@ -54,6 +65,9 @@ m3u8-one "<M3U8_URL>"
 
 ```bash
 node download.js "<M3U8_URL>"
+
+# 禁用代理
+node download.js "<M3U8_URL>" --no-proxy
 ```
 
 ### 示例
@@ -84,14 +98,74 @@ node download.js "https://prod-fastly-us-west-1.video.pscp.tv/Transcoding/v1/hls
 
 ## 代理配置
 
-默认使用以下代理配置：
+### 默认代理
 - HTTP/HTTPS代理：`http://127.0.0.1:7890`
 
-如需修改代理，请编辑 `download.js` 文件中的这几行：
+### 禁用代理
+使用 `--no-proxy` 参数禁用代理：
+```bash
+node cli.js "<M3U8_URL>" --no-proxy
+node download.js "<M3U8_URL>" --no-proxy
+node index.js "<M3U8_URL>" --no-proxy
+```
+
+### 通过环境变量设置自定义代理
+在运行前设置环境变量：
+```bash
+export HTTP_PROXY=http://your-proxy:8080
+export HTTPS_PROXY=http://your-proxy:8080
+node cli.js "<M3U8_URL>"
+```
+
+### 传统方法（编辑源代码）
+如需修改源代码中的代理设置，请编辑相应文件中的这几行：
 
 ```javascript
 process.env.GLOBAL_AGENT_HTTP_PROXY = 'http://127.0.0.1:7890';
 process.env.GLOBAL_AGENT_HTTPS_PROXY = 'http://127.0.0.1:7890';
+```
+
+## 通过 .env 文件配置
+
+要进行持久化配置，请在项目根目录创建 `.env` 文件：
+
+```bash
+cp .env.example .env
+# 编辑 .env 文件设置您的偏好
+```
+
+### 可用配置选项
+
+```env
+# 代理配置
+DISABLE_PROXY=false                    # 设置为 "true" 默认禁用代理
+HTTP_PROXY=http://127.0.0.1:7890       # HTTP 代理地址
+HTTPS_PROXY=http://127.0.0.1:7890      # HTTPS 代理地址
+
+# 下载配置
+OUTPUT_DIR=data                         # 输出目录
+CONCURRENT_DOWNLOADS=8                  # 并发下载数
+
+# 视频编码默认值（仅 cli.js 使用）
+DEFAULT_CODEC=h264                      # 默认视频编码器（h264 或 hevc）
+DEFAULT_CRF=23                          # 默认 CRF 值
+DEFAULT_PRESET=medium                   # 默认编码预设
+DEFAULT_AUDIO_BITRATE=128k              # 默认音频码率
+```
+
+### 优先级顺序
+1. **命令行参数**（最高优先级）
+2. **.env 文件配置**
+3. **代码默认值**（最低优先级）
+
+### 使用示例
+
+```bash
+# 使用 .env 配置
+node cli.js "https://example.com/playlist.m3u8"
+
+# 覆盖 .env 配置
+node cli.js "https://example.com/playlist.m3u8" --no-proxy --codec h264
 ```
 
 ## 合并视频片段
@@ -171,6 +245,8 @@ m3u8/
 ├── download.js          # 优化的下载脚本（支持断点续传）
 ├── index.js             # 基于 m3u8-dln 的下载脚本
 ├── package.json
+├── .env.example         # 配置文件模板
+├── .env                 # 用户配置文件（从 .env.example 创建）
 ├── data/                # 下载输出目录
 │   ├── playlist.m3u8   # M3U8播放列表
 │   └── *.ts            # 视频片段文件

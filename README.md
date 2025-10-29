@@ -8,10 +8,12 @@ A M3U8/HLS downloader tool with resume capability and one-click download→merge
 
 ## Features
 
-- HTTP proxy support (default: 127.0.0.1:7890, configurable via environment variables)
+- HTTP proxy support (default: 127.0.0.1:7890, configurable via environment variables or .env file)
+- Proxy disable option: Use `--no-proxy` flag to disable proxy
+- Configuration file support: Create `.env` file for persistent settings
 - Resume capability (manual mode): Automatically skips already downloaded segments
 - One-click mode: Download → merge → compress, outputs single file to `data/`
-- Concurrent downloads (manual mode): Default 8 concurrent connections
+- Concurrent downloads (manual mode): Default 8 concurrent connections (configurable)
 - Progress display and error tolerance
 
 ## Installation
@@ -36,12 +38,21 @@ node cli.js "<M3U8_URL>"
 # --crf <num>              Quality/size balance (default: 23; lower = higher quality)
 # --preset <p>             Encoding speed/efficiency (default: medium)
 # --audio-bitrate <rate>   Audio bitrate (default: 128k)
+# --no-proxy               Disable proxy usage
 ```
 
-Example:
+Examples:
 
 ```bash
+# Basic usage
 node cli.js "https://example.com/playlist.m3u8" --name my-video --h265 --crf 26 --preset slow
+
+# Disable proxy
+node cli.js "https://example.com/playlist.m3u8" --no-proxy
+
+# Use custom proxy (via .env file)
+# Create .env file with: HTTP_PROXY=http://your-proxy:8080
+node cli.js "https://example.com/playlist.m3u8"
 ```
 
 If installed globally (or `npm link` this repo), you can use directly:
@@ -54,6 +65,9 @@ m3u8-one "<M3U8_URL>"
 
 ```bash
 node download.js "<M3U8_URL>"
+
+# Disable proxy
+node download.js "<M3U8_URL>" --no-proxy
 ```
 
 ### Example
@@ -84,14 +98,74 @@ After download completes, it shows:
 
 ## Proxy Configuration
 
-Default proxy configuration:
+### Default Proxy
 - HTTP/HTTPS proxy: `http://127.0.0.1:7890`
 
-To modify proxy, edit these lines in `download.js`:
+### Disable Proxy
+Use `--no-proxy` flag to disable proxy:
+```bash
+node cli.js "<M3U8_URL>" --no-proxy
+node download.js "<M3U8_URL>" --no-proxy
+node index.js "<M3U8_URL>" --no-proxy
+```
+
+### Custom Proxy via Environment Variables
+Set environment variables before running:
+```bash
+export HTTP_PROXY=http://your-proxy:8080
+export HTTPS_PROXY=http://your-proxy:8080
+node cli.js "<M3U8_URL>"
+```
+
+### Legacy Method (Edit Source Code)
+To modify proxy in source code, edit these lines in the respective files:
 
 ```javascript
 process.env.GLOBAL_AGENT_HTTP_PROXY = 'http://127.0.0.1:7890';
 process.env.GLOBAL_AGENT_HTTPS_PROXY = 'http://127.0.0.1:7890';
+```
+
+## Configuration via .env File
+
+For persistent configuration, create a `.env` file in the project root:
+
+```bash
+cp .env.example .env
+# Edit .env file with your preferences
+```
+
+### Available Configuration Options
+
+```env
+# Proxy Configuration
+DISABLE_PROXY=false                    # Set to "true" to disable proxy by default
+HTTP_PROXY=http://127.0.0.1:7890       # HTTP proxy address
+HTTPS_PROXY=http://127.0.0.1:7890      # HTTPS proxy address
+
+# Download Configuration
+OUTPUT_DIR=data                         # Output directory
+CONCURRENT_DOWNLOADS=8                  # Number of concurrent downloads
+
+# Video Encoding Defaults (cli.js only)
+DEFAULT_CODEC=h264                      # Default video codec (h264 or hevc)
+DEFAULT_CRF=23                          # Default CRF value
+DEFAULT_PRESET=medium                   # Default encoding preset
+DEFAULT_AUDIO_BITRATE=128k              # Default audio bitrate
+```
+
+### Priority Order
+1. **Command line arguments** (highest priority)
+2. **.env file configuration**
+3. **Code defaults** (lowest priority)
+
+### Example Usage
+
+```bash
+# Use .env configuration
+node cli.js "https://example.com/playlist.m3u8"
+
+# Override .env configuration
+node cli.js "https://example.com/playlist.m3u8" --no-proxy --codec h264
 ```
 
 ## Merge Video Segments
@@ -171,6 +245,8 @@ m3u8/
 ├── download.js          # Optimized download script (with resume support)
 ├── index.js             # Download script based on m3u8-dln
 ├── package.json
+├── .env.example         # Configuration file template
+├── .env                 # User configuration file (create from .env.example)
 ├── data/                # Download output directory
 │   ├── playlist.m3u8   # M3U8 playlist
 │   └── *.ts            # Video segment files

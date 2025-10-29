@@ -11,12 +11,17 @@
   "bin": {
     "m3u8-one": "cli.js"
   },
-  "keywords": ["m3u8", "downloader", "hls"],
+  "keywords": [
+    "m3u8",
+    "downloader",
+    "hls"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "m3u8-dln": "^0.0.3",
+    "dotenv": "^17.2.3",
+    "global-agent": "^3.0.0",
     "https-proxy-agent": "^7.0.2",
-    "global-agent": "^3.0.0"
+    "m3u8-dln": "^0.0.3"
   }
 }

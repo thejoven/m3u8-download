@@ -3,18 +3,35 @@
 // One-click CLI: download + merge + compress into a single MP4 under data/
 // ESM, Node 18+
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 // Configure global proxy BEFORE any other imports
 import { bootstrap } from 'global-agent';
 
-// Prefer env overrides; fall back to default local proxy
-if (!process.env.GLOBAL_AGENT_HTTP_PROXY) {
-  process.env.GLOBAL_AGENT_HTTP_PROXY = 'http://127.0.0.1:7890';
-}
-if (!process.env.GLOBAL_AGENT_HTTPS_PROXY) {
-  process.env.GLOBAL_AGENT_HTTPS_PROXY = 'http://127.0.0.1:7890';
-}
+// Function to setup proxy based on command line arguments and .env config
+function setupProxy(noProxy) {
+  // Check if proxy should be disabled by .env config
+  const disableProxyByEnv = process.env.DISABLE_PROXY === 'true';
 
-bootstrap();
+  if (noProxy || disableProxyByEnv) {
+    // Clear proxy environment variables when proxy is disabled
+    delete process.env.GLOBAL_AGENT_HTTP_PROXY;
+    delete process.env.GLOBAL_AGENT_HTTPS_PROXY;
+    return false;
+  }
+
+  // Use .env proxy settings if available, otherwise use defaults
+  const httpProxy = process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.HTTP_PROXY || 'http://127.0.0.1:7890';
+  const httpsProxy = process.env.GLOBAL_AGENT_HTTPS_PROXY || process.env.HTTPS_PROXY || httpProxy;
+
+  // Set proxy environment variables
+  process.env.GLOBAL_AGENT_HTTP_PROXY = httpProxy;
+  process.env.GLOBAL_AGENT_HTTPS_PROXY = httpsProxy;
+
+  bootstrap();
+  return true;
+}
 
 import { spawn } from 'child_process';
 import { mkdir } from 'fs/promises';
@@ -51,7 +68,21 @@ function defaultBaseNameFromUrl(urlStr) {
 }
 
 function parseArgs(argv) {
-  const args = { url: undefined, name: undefined, codec: 'h264', crf: 23, preset: 'medium', audioBitrate: '128k' };
+  // Use .env defaults if available, otherwise use hardcoded defaults
+  const defaultCodec = process.env.DEFAULT_CODEC || 'h264';
+  const defaultCrf = process.env.DEFAULT_CRF ? Number(process.env.DEFAULT_CRF) : 23;
+  const defaultPreset = process.env.DEFAULT_PRESET || 'medium';
+  const defaultAudioBitrate = process.env.DEFAULT_AUDIO_BITRATE || '128k';
+
+  const args = {
+    url: undefined,
+    name: undefined,
+    codec: defaultCodec,
+    crf: defaultCrf,
+    preset: defaultPreset,
+    audioBitrate: defaultAudioBitrate,
+    noProxy: false
+  };
   const rest = argv.slice(2);
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
@@ -84,6 +115,10 @@ function parseArgs(argv) {
       args.audioBitrate = rest[++i];
       continue;
     }
+    if (a === '--no-proxy') {
+      args.noProxy = true;
+      continue;
+    }
     if (a === '-h' || a === '--help') {
       printHelpAndExit();
     }
@@ -101,9 +136,14 @@ function printHelpAndExit(code = 0) {
   console.log('  --crf <num>              Constant Rate Factor (default: 23)');
   console.log('  --preset <p>             x264/x265 preset (default: medium)');
   console.log('  --audio-bitrate <rate>   Audio bitrate (default: 128k)');
+  console.log('  --no-proxy               Disable proxy usage');
   console.log('');
   console.log('Environment:');
   console.log('  GLOBAL_AGENT_HTTP_PROXY / GLOBAL_AGENT_HTTPS_PROXY for proxy override');
+  console.log('');
+  console.log('Configuration:');
+  console.log('  Create a .env file to set default values for all options');
+  console.log('  See .env.example for available configuration options');
   process.exit(code);
 }
 
@@ -164,12 +204,17 @@ async function main() {
     printHelpAndExit(1);
   }
 
-  const dataDir = join(__dirname, 'data');
+  // Setup proxy based on command line argument
+  const proxyEnabled = setupProxy(args.noProxy);
+
+  const dataDir = join(__dirname, process.env.OUTPUT_DIR || 'data');
   await mkdir(dataDir, { recursive: true });
 
-  const usedProxy = process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY || 'none';
+  const proxyStatus = proxyEnabled
+    ? (process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY || 'none')
+    : 'disabled';
   console.log(`📁 Output directory: ${dataDir}`);
-  console.log(`🌐 Proxy: ${usedProxy}`);
+  console.log(`🌐 Proxy: ${proxyStatus}`);
   console.log('');
 
   const baseName = sanitizeFilename(args.name || defaultBaseNameFromUrl(args.url));
