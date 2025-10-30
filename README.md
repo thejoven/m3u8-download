@@ -62,6 +62,41 @@ If installed globally (or `npm link` this repo), you can use directly:
 m3u8-one "<M3U8_URL>"
 ```
 
+### Compress Local Video Files
+
+Compress existing video files with the same encoding options:
+
+```bash
+node compress.js <INPUT_VIDEO_FILE>
+
+# Optional parameters
+# --output <file>          Specify output file path
+# --codec <h264|hevc>      Video codec (default: h264)
+# --h265                   Equivalent to --codec hevc
+# --crf <num>              Quality/size balance (default: 23)
+# --preset <p>             Encoding speed/efficiency (default: medium)
+# --audio-bitrate <rate>   Audio bitrate (default: 128k)
+```
+
+Examples:
+
+```bash
+# Basic compression
+node compress.js video.mp4 --codec hevc --crf 26
+
+# Specify output file
+node compress.js input.mp4 --output compressed.mp4 --preset slow
+
+# Use npm script
+npm run compress -- video.mp4 --h265
+```
+
+If installed globally:
+
+```bash
+m3u8-compress video.mp4 --h265 --crf 26
+```
+
 ### Download Video Segments (Manual Mode)
 
 ```bash
@@ -244,14 +279,20 @@ Ensure local proxy service (such as Clash, V2Ray, etc.) is running and listening
 ```
 m3u8/
 ├── cli.js               # One-click download→merge→compress CLI (outputs single file)
+├── compress.js          # Video compression tool for local files
 ├── download.js          # Optimized download script (with resume support)
 ├── index.js             # Download script based on m3u8-dln
 ├── package.json
 ├── .env.example         # Configuration file template
 ├── .env                 # User configuration file (create from .env.example)
 ├── data/                # Download output directory
-│   ├── playlist.m3u8   # M3U8 playlist
-│   └── *.ts            # Video segment files
+│   ├── {hash1}/        # Task 1 hash folder
+│   │   ├── playlist.m3u8
+│   │   └── *.ts
+│   ├── {hash2}/        # Task 2 hash folder
+│   │   ├── playlist.m3u8
+│   │   └── *.ts
+│   └── ...
 └── README.md
 ```
 

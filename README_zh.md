@@ -62,6 +62,41 @@ node cli.js "https://example.com/playlist.m3u8"
 m3u8-one "<M3U8_URL>"
 ```
 
+### 压缩本地视频文件
+
+使用相同的编码选项压缩现有视频文件：
+
+```bash
+node compress.js <输入视频文件>
+
+# 可选参数
+# --output <file>          指定输出文件路径
+# --codec <h264|hevc>      视频编码器（默认 h264）
+# --h265                   等价于 --codec hevc
+# --crf <num>              质量/体积平衡（默认 23）
+# --preset <p>             编码速度/效率（默认 medium）
+# --audio-bitrate <rate>   音频码率（默认 128k）
+```
+
+示例：
+
+```bash
+# 基本压缩
+node compress.js video.mp4 --codec hevc --crf 26
+
+# 指定输出文件
+node compress.js input.mp4 --output compressed.mp4 --preset slow
+
+# 使用 npm 脚本
+npm run compress -- video.mp4 --h265
+```
+
+如果全局安装：
+
+```bash
+m3u8-compress video.mp4 --h265 --crf 26
+```
+
 ### 下载视频片段（手动模式）
 
 ```bash
@@ -244,6 +279,7 @@ ffmpeg -i data/playlist.m3u8 -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 1
 ```
 m3u8/
 ├── cli.js               # 一键下载→合并→压缩 CLI（输出单文件）
+├── compress.js          # 本地视频压缩工具
 ├── download.js          # 优化的下载脚本（支持断点续传）
 ├── index.js             # 基于 m3u8-dln 的下载脚本
 ├── package.json

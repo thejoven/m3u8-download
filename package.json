@@ -6,10 +6,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "one": "node cli.js"
+    "one": "node cli.js",
+    "compress": "node compress.js"
   },
   "bin": {
-    "m3u8-one": "cli.js"
+    "m3u8-one": "cli.js",
+    "m3u8-compress": "compress.js"
   },
   "keywords": [
     "m3u8",
